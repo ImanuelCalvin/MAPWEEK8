@@ -17,6 +17,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.example.mapweek8.worker.FirstWorker
 import com.example.mapweek8.worker.SecondWorker
+import com.example.mapweek8.worker.ThirdWorker
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        // Permission notifikasi untuk Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
@@ -67,36 +69,41 @@ class MainActivity : AppCompatActivity() {
             .setInputData(createInputData(SecondWorker.INPUT_DATA_ID, id))
             .build()
 
+        val thirdRequest = OneTimeWorkRequest.Builder(ThirdWorker::class.java)
+            .setConstraints(constraints)
+            .setInputData(createInputData(ThirdWorker.INPUT_DATA_ID, id))
+            .build()
+
+        // Rantai worker sesuai assignment
         workManager.beginWith(firstRequest)
             .then(secondRequest)
+            .then(thirdRequest)
             .enqueue()
 
-        workManager.getWorkInfoByIdLiveData(firstRequest.id)
-            .observe(this) {
-                if (it.state.isFinished) {
-                    showToast("First process is done")
+        workManager.getWorkInfoByIdLiveData(secondRequest.id)
+            .observe(this) { info ->
+                if (info.state.isFinished) {
+                    showToast("Second process is done")
+                    launchFirstNotificationService()
                 }
             }
 
-        workManager.getWorkInfoByIdLiveData(secondRequest.id)
-            .observe(this) {
-                if (it.state.isFinished) {
-                    showToast("Second process is done")
-                    launchNotificationService()
+        workManager.getWorkInfoByIdLiveData(thirdRequest.id)
+            .observe(this) { info ->
+                if (info.state.isFinished) {
+                    showToast("Third process is done")
+                    launchSecondNotificationService()
                 }
             }
     }
 
-    private fun launchNotificationService() {
+    private fun launchFirstNotificationService() {
+        val intent = Intent(this, NotificationService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+    }
 
-        NotificationService.trackingCompletion.observe(this) { id ->
-            showToast("Process for Notification Channel ID $id is done!")
-        }
-
-        val intent = Intent(this, NotificationService::class.java).apply {
-            putExtra(NotificationService.EXTRA_ID, "001")
-        }
-
+    private fun launchSecondNotificationService() {
+        val intent = Intent(this, SecondNotificationService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
 
