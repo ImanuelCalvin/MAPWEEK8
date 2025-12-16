@@ -14,7 +14,6 @@ class FirstWorker(
 
         val id = inputData.getString(INPUT_DATA_ID)
 
-        // Simulasi proses berat
         Thread.sleep(3000L)
 
         val outputData = Data.Builder()

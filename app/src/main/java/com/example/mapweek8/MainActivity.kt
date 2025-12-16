@@ -1,9 +1,13 @@
 package com.example.mapweek8
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.work.Constraints
@@ -34,6 +38,17 @@ class MainActivity : AppCompatActivity() {
                 systemBars.bottom
             )
             insets
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    1
+                )
+            }
         }
 
         val constraints = Constraints.Builder()
@@ -67,8 +82,22 @@ class MainActivity : AppCompatActivity() {
             .observe(this) {
                 if (it.state.isFinished) {
                     showToast("Second process is done")
+                    launchNotificationService()
                 }
             }
+    }
+
+    private fun launchNotificationService() {
+
+        NotificationService.trackingCompletion.observe(this) { id ->
+            showToast("Process for Notification Channel ID $id is done!")
+        }
+
+        val intent = Intent(this, NotificationService::class.java).apply {
+            putExtra(NotificationService.EXTRA_ID, "001")
+        }
+
+        ContextCompat.startForegroundService(this, intent)
     }
 
     private fun createInputData(key: String, value: String): Data {
